@@ -84,25 +84,25 @@ const workoutPlans = {
   ]
 };
 
-// Weekly schedule (4 workout days, 3 rest days)
+// Weekly schedule (4 workout days, 3 rest days, starting Tuesday)
 const weeklySchedule = {
   A: [
-    'push',   // Monday
-    'Rest',   // Tuesday
+    'Rest',   // Sunday
+    'Rest',   // Monday
+    'push',   // Tuesday
     'pull',   // Wednesday
     'Rest',   // Thursday
     'legs',   // Friday
-    'arms',   // Saturday
-    'Rest'    // Sunday
+    'arms'    // Saturday
   ],
   B: [
-    'pushB',  // Monday
-    'Rest',   // Tuesday
-    'pullB',  // Wednesday
+    'Rest',   // Sunday
+    'Rest',   // Monday
+    'pushB',  // Tuesday
+    'pushB',  // Wednesday
     'Rest',   // Thursday
     'legsB',  // Friday
-    'armsB',  // Saturday
-    'Rest'    // Sunday
+    'armsB'   // Saturday
   ]
 };
 
@@ -114,7 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentWeekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
   const currentWeekType = currentWeekNumber % 2 === 0 ? 'B' : 'A';
   logDateInput.value = today.toISOString().split('T')[0];
-  loadWorkout(weeklySchedule[currentWeekType][today.getDay()]);
+  const todayIndex = today.getDay();
+  const todayWorkout = weeklySchedule[currentWeekType][todayIndex];
+  loadWorkout(todayWorkout === 'Rest' ? weeklySchedule[currentWeekType][2] : todayWorkout); // Default to Tuesday's workout if today is Rest
   renderCalendar();
   renderProgressStats();
   renderHistory();
@@ -125,7 +127,7 @@ function renderCalendar() {
   calendarList.innerHTML = '';
   const today = new Date();
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay());
+  startOfWeek.setDate(today.getDate() - today.getDay()); // Start on Sunday
   const currentWeekNumber = Math.ceil(((today - new Date(today.getFullYear(), 0, 1) + 86400000) / 86400000 + new Date(today.getFullYear(), 0, 1).getDay() + 1) / 7);
   const currentWeekType = currentWeekNumber % 2 === 0 ? 'B' : 'A';
   const schedule = weeklySchedule[currentWeekType];
@@ -136,9 +138,10 @@ function renderCalendar() {
     const dayName = day.toLocaleDateString('en-US', { weekday: 'long' });
     const workout = schedule[i];
     const isToday = day.toDateString() === today.toDateString();
+    const displayWorkout = workout === 'Rest' ? 'Rest' : (workout.includes('B') ? workout.replace('B', ' B').toUpperCase() : workout.toUpperCase() + ' A');
     const li = document.createElement('li');
     li.className = isToday ? 'font-bold text-blue-600' : '';
-    li.textContent = `${dayName}: ${workout === 'Rest' ? 'Rest' : workout.toUpperCase()}`;
+    li.textContent = `${dayName}: ${displayWorkout}`;
     calendarList.appendChild(li);
   }
 }
