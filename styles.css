@@ -1,0 +1,21 @@
+/* Custom styles for Workout Planner V2 */
+#timerDisplay {
+  font-family: monospace;
+  min-width: 60px;
+}
+
+#calendar li, #workoutHistory li {
+  padding: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+#calendar li:last-child, #workoutHistory li:last-child {
+  border-bottom: none;
+}
+
+.edit-btn {
+  margin-left: 8px;
+  color: #3b82f6;
+  text-decoration: underline;
+  cursor: pointer;
+}

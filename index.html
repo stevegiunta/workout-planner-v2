@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Steve's Workout Planner V2</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="container mx-auto p-4 max-w-lg">
+    <!-- Header -->
+    <h1 class="text-2xl font-bold text-gray-800 text-center mb-6">Steve's Workout Planner</h1>
+
+    <!-- Calendar -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Weekly Schedule</h2>
+      <ul id="calendar" class="space-y-2"></ul>
+    </div>
+
+    <!-- Workout Selector -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Select Workout</h2>
+      <div class="flex flex-wrap justify-center gap-2">
+        <div class="w-full text-center font-bold mb-2">Week 1 (A)</div>
+        <button onclick="loadWorkout('push')" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Push A</button>
+        <button onclick="loadWorkout('pull')" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Pull A</button>
+        <button onclick="loadWorkout('legs')" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Legs A</button>
+        <button onclick="loadWorkout('arms')" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Arms A</button>
+        <div class="w-full text-center font-bold mt-4 mb-2">Week 2 (B)</div>
+        <button onclick="loadWorkout('pushB')" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Push B</button>
+        <button onclick="loadWorkout('pullB')" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Pull B</button>
+        <button onclick="loadWorkout('legsB')" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Legs B</button>
+        <button onclick="loadWorkout('armsB')" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Arms B</button>
+      </div>
+    </div>
+
+    <!-- Rest Timer -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Rest Timer (60s)</h2>
+      <div class="flex items-center space-x-4">
+        <span id="timerDisplay" class="text-2xl font-mono text-gray-800">00:00</span>
+        <button id="startTimer" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" aria-label="Start timer">Start</button>
+        <button id="pauseTimer" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" aria-label="Pause timer" disabled>Pause</button>
+        <button id="resetTimer" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" aria-label="Reset timer">Reset</button>
+      </div>
+    </div>
+
+    <!-- Workout Content -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Current Workout: <span id="workoutTitle"></span></h2>
+      <div class="mb-4">
+        <label for="logDate" class="block text-gray-700">Log Date:</label>
+        <input id="logDate" type="date" class="w-full p-2 border rounded" aria-label="Select log date">
+      </div>
+      <div id="content" class="space-y-4"></div>
+    </div>
+
+    <!-- Progress Stats -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Progress Stats</h2>
+      <div id="progressStats" class="text-gray-700"></div>
+    </div>
+
+    <!-- History -->
+    <div class="bg-white shadow-md rounded-lg p-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Workout History</h2>
+      <ul id="workoutHistory" class="space-y-2"></ul>
+    </div>
+  </div>
+  <script src="main.js" defer></script>
+</body>
+</html>
