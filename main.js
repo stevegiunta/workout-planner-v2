@@ -84,25 +84,25 @@ const workoutPlans = {
   ]
 };
 
-// Weekly schedule (4 workout days, 3 rest days)
+// Weekly schedule (4 workout days, 3 rest days, starting Tuesday)
 const weeklySchedule = {
   A: [
-    'push',   // Monday
-    'Rest',   // Tuesday
+    'Rest',   // Sunday
+    'Rest',   // Monday
+    'push',   // Tuesday
     'pull',   // Wednesday
     'Rest',   // Thursday
     'legs',   // Friday
-    'arms',   // Saturday
-    'Rest'    // Sunday
+    'arms'    // Saturday
   ],
   B: [
-    'pushB',  // Monday
-    'Rest',   // Tuesday
+    'Rest',   // Sunday
+    'Rest',   // Monday
+    'pushB',  // Tuesday
     'pullB',  // Wednesday
     'Rest',   // Thursday
     'legsB',  // Friday
-    'armsB',  // Saturday
-    'Rest'    // Sunday
+    'armsB'   // Saturday
   ]
 };
 
@@ -114,7 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentWeekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
   const currentWeekType = currentWeekNumber % 2 === 0 ? 'B' : 'A';
   logDateInput.value = today.toISOString().split('T')[0];
-  loadWorkout(weeklySchedule[currentWeekType][today.getDay()]);
+  const todayIndex = today.getDay();
+  const todayWorkout = weeklySchedule[currentWeekType][todayIndex];
+  loadWorkout(todayWorkout === 'Rest' ? weeklySchedule[currentWeekType][2] : todayWorkout); // Default to Tuesday's workout if today is Rest
   renderCalendar();
   renderProgressStats();
   renderHistory();
@@ -125,7 +127,7 @@ function renderCalendar() {
   calendarList.innerHTML = '';
   const today = new Date();
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay());
+  startOfWeek.setDate(today.getDate() - today.getDay()); // Start on Sunday
   const currentWeekNumber = Math.ceil(((today - new Date(today.getFullYear(), 0, 1) + 86400000) / 86400000 + new Date(today.getFullYear(), 0, 1).getDay() + 1) / 7);
   const currentWeekType = currentWeekNumber % 2 === 0 ? 'B' : 'A';
   const schedule = weeklySchedule[currentWeekType];
@@ -262,64 +264,4 @@ function renderHistory() {
     li.innerHTML = `
       ${w.date}: ${w.type.toUpperCase()}<br>
       ${w.exercises.map(e => `${e.name}: ${e.sets} sets, ${e.reps} reps, ${e.weight} lbs`).join('<br>')}
-      <span class="edit-btn" data-id="${w.id}">Edit</span>
-    `;
-    workoutHistory.appendChild(li);
-  });
-
-  document.querySelectorAll('.edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => editWorkout(parseInt(btn.dataset.id)));
-  });
-}
-
-// Timer functions
-function updateTimerDisplay() {
-  const minutes = Math.floor(timerSeconds / 60);
-  const seconds = timerSeconds % 60;
-  timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
-
-function startTimer() {
-  if (!isTimerRunning) {
-    isTimerRunning = true;
-    startTimerBtn.disabled = true;
-    pauseTimerBtn.disabled = false;
-    timerInterval = setInterval(() => {
-      timerSeconds++;
-      updateTimerDisplay();
-      if (timerSeconds === 60) {
-        clearInterval(timerInterval);
-        isTimerRunning = false;
-        startTimerBtn.disabled = false;
-        pauseTimerBtn.disabled = true;
-        alert('Rest timer complete!');
-      }
-    }, 1000);
-  }
-}
-
-function pauseTimer() {
-  if (isTimerRunning) {
-    clearInterval(timerInterval);
-    isTimerRunning = false;
-    startTimerBtn.disabled = false;
-    pauseTimerBtn.disabled = true;
-  }
-}
-
-function resetTimer() {
-  clearInterval(timerInterval);
-  isTimerRunning = false;
-  timerSeconds = 0;
-  updateTimerDisplay();
-  startTimerBtn.disabled = false;
-  pauseTimerBtn.disabled = true;
-}
-
-// Timer events
-startTimerBtn.addEventListener('click', startTimer);
-pauseTimerBtn.addEventListener('click', pauseTimer);
-resetTimerBtn.addEventListener('click', resetTimer);
-
-// Date change
-logDateInput.addEventListener('change', () => loadWorkout(currentWorkout));
+      <span class="edit-btn" data-id="${w.id}">Edit
