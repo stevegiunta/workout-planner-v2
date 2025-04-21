@@ -1,3 +1,6 @@
+// Check if running in a browser environment
+const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+
 const workoutForm = document.getElementById('workoutForm');
 const calendarList = document.getElementById('calendar');
 const workoutTitle = document.getElementById('workoutTitle');
@@ -10,7 +13,7 @@ const startTimerBtn = document.getElementById('startTimer');
 const pauseTimerBtn = document.getElementById('pauseTimer');
 const resetTimerBtn = document.getElementById('resetTimer');
 
-let workouts = JSON.parse(localStorage.getItem('workouts')) || [];
+let workouts = isBrowser ? JSON.parse(localStorage.getItem('workouts')) || [] : [];
 let currentWorkout = '';
 let timerInterval = null;
 let timerSeconds = 0;
@@ -99,7 +102,7 @@ const weeklySchedule = {
     'Rest',   // Sunday
     'Rest',   // Monday
     'pushB',  // Tuesday
-    'pushB',  // Wednesday
+    'pullB',  // Wednesday
     'Rest',   // Thursday
     'legsB',  // Friday
     'armsB'   // Saturday
@@ -107,23 +110,26 @@ const weeklySchedule = {
 };
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
-  const today = new Date();
-  const startOfYear = new Date(today.getFullYear(), 0, 1);
-  const pastDaysOfYear = (today - startOfYear + 86400000) / 86400000;
-  const currentWeekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
-  const currentWeekType = currentWeekNumber % 2 === 0 ? 'B' : 'A';
-  logDateInput.value = today.toISOString().split('T')[0];
-  const todayIndex = today.getDay();
-  const todayWorkout = weeklySchedule[currentWeekType][todayIndex];
-  loadWorkout(todayWorkout === 'Rest' ? weeklySchedule[currentWeekType][2] : todayWorkout); // Default to Tuesday's workout if today is Rest
-  renderCalendar();
-  renderProgressStats();
-  renderHistory();
-});
+if (isBrowser) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const pastDaysOfYear = (today - startOfYear + 86400000) / 86400000;
+    const currentWeekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+    const currentWeekType = currentWeekNumber % 2 === 0 ? 'B' : 'A';
+    logDateInput.value = today.toISOString().split('T')[0];
+    const todayIndex = today.getDay();
+    const todayWorkout = weeklySchedule[currentWeekType][todayIndex];
+    loadWorkout(todayWorkout === 'Rest' ? weeklySchedule[currentWeekType][2] : todayWorkout); // Default to Tuesday's workout if today is Rest
+    renderCalendar();
+    renderProgressStats();
+    renderHistory();
+  });
+}
 
 // Render calendar
 function renderCalendar() {
+  if (!isBrowser || !calendarList) return;
   calendarList.innerHTML = '';
   const today = new Date();
   const startOfWeek = new Date(today);
@@ -148,8 +154,9 @@ function renderCalendar() {
 
 // Load workout
 function loadWorkout(type) {
+  if (!isBrowser || !contentDiv || !workoutTitle) return;
   currentWorkout = type;
-  const date = logDateInput.value || new Date().toISOString().split('T')[0];
+  const date = logDateInput?.value || new Date().toISOString().split('T')[0];
   workoutTitle.textContent = type.toUpperCase() + (type.includes('B') ? ' (Week 2)' : ' (Week 1)');
   const exercises = workoutPlans[type];
   if (!exercises) {
@@ -160,12 +167,12 @@ function loadWorkout(type) {
   contentDiv.innerHTML = exercises.map((ex, index) => {
     const inputId = `${type}-${index}`;
     const logKey = `${inputId}-${date}`;
-    const savedValue = localStorage.getItem(logKey) || '';
-    const prevDates = Object.keys(localStorage)
+    const savedValue = isBrowser ? localStorage.getItem(logKey) || '' : '';
+    const prevDates = isBrowser ? Object.keys(localStorage)
       .filter(k => k.startsWith(inputId + '-') && k !== logKey)
-      .sort().reverse();
+      .sort().reverse() : [];
     const lastLogKey = prevDates[0];
-    const lastValue = lastLogKey ? localStorage.getItem(lastLogKey) : '—';
+    const lastValue = lastLogKey && isBrowser ? localStorage.getItem(lastLogKey) : '—';
     return `
       <div class="exercise space-y-2">
         <strong>${ex.name}</strong>
@@ -180,6 +187,7 @@ function loadWorkout(type) {
 
 // Save with feedback
 function saveWithFeedback(key, input) {
+  if (!isBrowser) return;
   localStorage.setItem(key, input.value);
   const status = document.createElement('div');
   status.textContent = 'Saved';
@@ -188,7 +196,7 @@ function saveWithFeedback(key, input) {
   setTimeout(() => status.remove(), 1000);
 
   // Save to workouts array for history
-  const date = logDateInput.value || new Date().toISOString().split('T')[0];
+  const date = logDateInput?.value || new Date().toISOString().split('T')[0];
   const workoutLog = {
     id: Date.now(),
     type: currentWorkout,
@@ -210,6 +218,7 @@ function saveWithFeedback(key, input) {
 
 // Edit workout
 function editWorkout(id) {
+  if (!isBrowser || !contentDiv) return;
   const workout = workouts.find(w => w.id === id);
   if (!workout) return;
 
@@ -245,6 +254,7 @@ function editWorkout(id) {
 
 // Render progress stats
 function renderProgressStats() {
+  if (!isBrowser || !progressStatsDiv) return;
   const totalWeight = workouts.reduce((sum, w) => sum + w.exercises.reduce((s, e) => s + (parseInt(e.weight) || 0) * e.sets, 0), 0);
   const workoutsByType = {};
   workouts.forEach(w => {
@@ -259,6 +269,7 @@ function renderProgressStats() {
 
 // Render history
 function renderHistory() {
+  if (!isBrowser || !workoutHistory) return;
   workoutHistory.innerHTML = '';
   workouts.forEach(w => {
     const li = document.createElement('li');
@@ -277,40 +288,40 @@ function renderHistory() {
 
 // Timer functions
 function updateTimerDisplay() {
+  if (!isBrowser || !timerDisplay) return;
   const minutes = Math.floor(timerSeconds / 60);
   const seconds = timerSeconds % 60;
   timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
 function startTimer() {
-  if (!isTimerRunning) {
-    isTimerRunning = true;
-    startTimerBtn.disabled = true;
-    pauseTimerBtn.disabled = false;
-    timerInterval = setInterval(() => {
-      timerSeconds++;
-      updateTimerDisplay();
-      if (timerSeconds === 60) {
-        clearInterval(timerInterval);
-        isTimerRunning = false;
-        startTimerBtn.disabled = false;
-        pauseTimerBtn.disabled = true;
-        alert('Rest timer complete!');
-      }
-    }, 1000);
-  }
+  if (!isBrowser || isTimerRunning) return;
+  isTimerRunning = true;
+  startTimerBtn.disabled = true;
+  pauseTimerBtn.disabled = false;
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    updateTimerDisplay();
+    if (timerSeconds === 60) {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      startTimerBtn.disabled = false;
+      pauseTimerBtn.disabled = true;
+      alert('Rest timer complete!');
+    }
+  }, 1000);
 }
 
 function pauseTimer() {
-  if (isTimerRunning) {
-    clearInterval(timerInterval);
-    isTimerRunning = false;
-    startTimerBtn.disabled = false;
-    pauseTimerBtn.disabled = true;
-  }
+  if (!isBrowser || !isTimerRunning) return;
+  clearInterval(timerInterval);
+  isTimerRunning = false;
+  startTimerBtn.disabled = false;
+  pauseTimerBtn.disabled = true;
 }
 
 function resetTimer() {
+  if (!isBrowser) return;
   clearInterval(timerInterval);
   isTimerRunning = false;
   timerSeconds = 0;
@@ -320,9 +331,11 @@ function resetTimer() {
 }
 
 // Timer events
-startTimerBtn.addEventListener('click', startTimer);
-pauseTimerBtn.addEventListener('click', pauseTimer);
-resetTimerBtn.addEventListener('click', resetTimer);
+if (isBrowser) {
+  startTimerBtn?.addEventListener('click', startTimer);
+  pauseTimerBtn?.addEventListener('click', pauseTimer);
+  resetTimerBtn?.addEventListener('click', resetTimer);
 
-// Date change
-logDateInput.addEventListener('change', () => loadWorkout(currentWorkout));
+  // Date change
+  logDateInput?.addEventListener('change', () => loadWorkout(currentWorkout));
+}
