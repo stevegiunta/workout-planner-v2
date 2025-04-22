@@ -1,7 +1,5 @@
-// Check if running in a browser environment
 const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 
-const workoutForm = document.getElementById('workoutForm');
 const calendarList = document.getElementById('calendar');
 const workoutTitle = document.getElementById('workoutTitle');
 const logDateInput = document.getElementById('logDate');
@@ -19,7 +17,6 @@ let timerInterval = null;
 let timerSeconds = 0;
 let isTimerRunning = false;
 
-// Workout definitions (from your index.html)
 const workoutPlans = {
   push: [
     { name: "Incline Machine Press", sets: 3, reps: "8–10", category: "Push" },
@@ -87,29 +84,11 @@ const workoutPlans = {
   ]
 };
 
-// Weekly schedule (4 workout days, 3 rest days, starting Tuesday)
 const weeklySchedule = {
-  A: [
-    'Rest',   // Sunday
-    'Rest',   // Monday
-    'push',   // Tuesday
-    'pull',   // Wednesday
-    'Rest',   // Thursday
-    'legs',   // Friday
-    'arms'    // Saturday
-  ],
-  B: [
-    'Rest',   // Sunday
-    'Rest',   // Monday
-    'pushB',  // Tuesday
-    'pullB',  // Wednesday
-    'Rest',   // Thursday
-    'legsB',  // Friday
-    'armsB'   // Saturday
-  ]
+  A: ['Rest', 'Rest', 'push', 'pull', 'Rest', 'legs', 'arms'],
+  B: ['Rest', 'Rest', 'pushB', 'pullB', 'Rest', 'legsB', 'armsB']
 };
 
-// Initialize
 if (isBrowser) {
   document.addEventListener('DOMContentLoaded', () => {
     const today = new Date();
@@ -120,20 +99,19 @@ if (isBrowser) {
     logDateInput.value = today.toISOString().split('T')[0];
     const todayIndex = today.getDay();
     const todayWorkout = weeklySchedule[currentWeekType][todayIndex];
-    loadWorkout(todayWorkout === 'Rest' ? weeklySchedule[currentWeekType][2] : todayWorkout); // Default to Tuesday's workout if today is Rest
+    loadWorkout(todayWorkout === 'Rest' ? weeklySchedule[currentWeekType][2] : todayWorkout);
     renderCalendar();
     renderProgressStats();
     renderHistory();
   });
 }
 
-// Render calendar
 function renderCalendar() {
   if (!isBrowser || !calendarList) return;
   calendarList.innerHTML = '';
   const today = new Date();
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay()); // Start on Sunday
+  startOfWeek.setDate(today.getDate() - today.getDay());
   const currentWeekNumber = Math.ceil(((today - new Date(today.getFullYear(), 0, 1) + 86400000) / 86400000 + new Date(today.getFullYear(), 0, 1).getDay() + 1) / 7);
   const currentWeekType = currentWeekNumber % 2 === 0 ? 'B' : 'A';
   const schedule = weeklySchedule[currentWeekType];
@@ -152,7 +130,6 @@ function renderCalendar() {
   }
 }
 
-// Load workout
 function loadWorkout(type) {
   if (!isBrowser || !contentDiv || !workoutTitle) return;
   currentWorkout = type;
@@ -167,47 +144,73 @@ function loadWorkout(type) {
   contentDiv.innerHTML = exercises.map((ex, index) => {
     const inputId = `${type}-${index}`;
     const logKey = `${inputId}-${date}`;
-    const savedValue = isBrowser ? localStorage.getItem(logKey) || '' : '';
+    const savedValue = isBrowser ? JSON.parse(localStorage.getItem(logKey)) || [] : [];
     const prevDates = isBrowser ? Object.keys(localStorage)
       .filter(k => k.startsWith(inputId + '-') && k !== logKey)
       .sort().reverse() : [];
     const lastLogKey = prevDates[0];
-    const lastValue = lastLogKey && isBrowser ? localStorage.getItem(lastLogKey) : '—';
+    const lastValue = lastLogKey && isBrowser ? JSON.parse(localStorage.getItem(lastLogKey)) || [] : [];
+    const lastDisplay = lastValue.length ? lastValue.map(s => `${s.weight}x${s.reps}`).join(', ') : '—';
+    const maxSets = ex.sets || 3; // Default to 3 sets if not specified
+    let setInputs = '';
+    for (let i = 0; i < maxSets; i++) {
+      const weight = savedValue[i]?.weight || '';
+      const reps = savedValue[i]?.reps || '';
+      setInputs += `
+        <div class="flex space-x-4">
+          <div class="flex-1">
+            <label for="${inputId}-weight-${i}" class="block text-gray-700">Set ${i + 1} Weight (lbs):</label>
+            <input id="${inputId}-weight-${i}" type="number" value="${weight}" class="w-full p-2 border rounded" min="0" placeholder="e.g. 50" aria-label="Weight for set ${i + 1}" oninput="saveSets('${logKey}', '${inputId}', ${maxSets}); updateLastDisplay('${inputId}', '${lastLogKey}')">
+          </div>
+          <div class="flex-1">
+            <label for="${inputId}-reps-${i}" class="block text-gray-700">Set ${i + 1} Reps:</label>
+            <input id="${inputId}-reps-${i}" type="number" value="${reps}" class="w-full p-2 border rounded" min="0" placeholder="e.g. 12" aria-label="Reps for set ${i + 1}" oninput="saveSets('${logKey}', '${inputId}', ${maxSets}); updateLastDisplay('${inputId}', '${lastLogKey}')">
+          </div>
+        </div>
+      `;
+    }
     return `
       <div class="exercise space-y-2">
         <strong>${ex.name}</strong>
         <div>Sets: ${ex.sets}, Reps: ${ex.reps}</div>
-        <label for="${inputId}" class="block text-gray-700">Weight Used (lbs):</label>
-        <input id="${inputId}" type="number" value="${savedValue}" class="w-full p-2 border rounded" min="0" placeholder="e.g. 50" aria-label="Weight for ${ex.name}" oninput="saveWithFeedback('${logKey}', this); document.getElementById('last-${inputId}').innerText = this.value || '—'" required>
-        <div class="text-sm text-gray-500">Last: <span id="last-${inputId}">${lastValue}</span></div>
+        ${setInputs}
+        <div class="text-sm text-gray-500">Last: <span id="last-${inputId}">${lastDisplay}</span></div>
       </div>
     `;
   }).join('');
 }
 
-// Save with feedback
-function saveWithFeedback(key, input) {
+function saveSets(logKey, inputId, maxSets) {
   if (!isBrowser) return;
-  localStorage.setItem(key, input.value);
+  const sets = [];
+  for (let i = 0; i < maxSets; i++) {
+    const weight = parseInt(document.getElementById(`${inputId}-weight-${i}`).value) || 0;
+    const reps = parseInt(document.getElementById(`${inputId}-reps-${i}`).value) || 0;
+    if (weight || reps) sets.push({ weight, reps });
+  }
+  localStorage.setItem(logKey, JSON.stringify(sets));
   const status = document.createElement('div');
   status.textContent = 'Saved';
   status.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded';
   document.body.appendChild(status);
   setTimeout(() => status.remove(), 1000);
 
-  // Save to workouts array for history
   const date = logDateInput?.value || new Date().toISOString().split('T')[0];
   const workoutLog = {
     id: Date.now(),
     type: currentWorkout,
     date,
-    exercises: workoutPlans[currentWorkout].map((ex, index) => ({
-      name: ex.name,
-      sets: ex.sets,
-      reps: ex.reps,
-      weight: document.getElementById(`${currentWorkout}-${index}`)?.value || 0,
-      category: ex.category
-    }))
+    exercises: workoutPlans[currentWorkout].map((ex, index) => {
+      const exLogKey = `${currentWorkout}-${index}-${date}`;
+      const exSets = JSON.parse(localStorage.getItem(exLogKey)) || [];
+      return {
+        name: ex.name,
+        sets: ex.sets,
+        reps: ex.reps,
+        setsData: exSets,
+        category: ex.category
+      };
+    })
   };
   workouts = workouts.filter(w => !(w.type === workoutLog.type && w.date === workoutLog.date));
   workouts.push(workoutLog);
@@ -216,7 +219,13 @@ function saveWithFeedback(key, input) {
   renderProgressStats();
 }
 
-// Edit workout
+function updateLastDisplay(inputId, lastLogKey) {
+  if (!isBrowser) return;
+  const lastValue = lastLogKey ? JSON.parse(localStorage.getItem(lastLogKey)) || [] : [];
+  const lastDisplay = lastValue.length ? lastValue.map(s => `${s.weight}x${s.reps}`).join(', ') : '—';
+  document.getElementById(`last-${inputId}`).innerText = lastDisplay;
+}
+
 function editWorkout(id) {
   if (!isBrowser || !contentDiv) return;
   const workout = workouts.find(w => w.id === id);
@@ -229,8 +238,18 @@ function editWorkout(id) {
         <div class="space-y-2">
           <strong>${ex.name}</strong>
           <div>Sets: ${ex.sets}, Reps: ${ex.reps}</div>
-          <label for="edit-${index}" class="block text-gray-700">Weight Used (lbs):</label>
-          <input id="edit-${index}" type="number" value="${ex.weight}" class="w-full p-2 border rounded" min="0" aria-label="Edit weight for ${ex.name}" required>
+          ${Array.from({ length: ex.sets }, (_, i) => `
+            <div class="flex space-x-4">
+              <div class="flex-1">
+                <label for="edit-${index}-weight-${i}" class="block text-gray-700">Set ${i + 1} Weight (lbs):</label>
+                <input id="edit-${index}-weight-${i}" type="number" value="${ex.setsData[i]?.weight || 0}" class="w-full p-2 border rounded" min="0" aria-label="Edit weight for set ${i + 1}">
+              </div>
+              <div class="flex-1">
+                <label for="edit-${index}-reps-${i}" class="block text-gray-700">Set ${i + 1} Reps:</label>
+                <input id="edit-${index}-reps-${i}" type="number" value="${ex.setsData[i]?.reps || 0}" class="w-full p-2 border rounded" min="0" aria-label="Edit reps for set ${i + 1}">
+              </div>
+            </div>
+          `).join('')}
         </div>
       `).join('')}
       <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Save Changes</button>
@@ -239,10 +258,18 @@ function editWorkout(id) {
 
   document.getElementById('editForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const newExercises = workout.exercises.map((ex, index) => ({
-      ...ex,
-      weight: parseInt(document.getElementById(`edit-${index}`).value) || 0
-    }));
+    const newExercises = workout.exercises.map((ex, index) => {
+      const newSets = Array.from({ length: ex.sets }, (_, i) => ({
+        weight: parseInt(document.getElementById(`edit-${index}-weight-${i}`).value) || 0,
+        reps: parseInt(document.getElementById(`edit-${index}-reps-${i}`).value) || 0
+      })).filter(s => s.weight || s.reps);
+      const exLogKey = `${workout.type}-${index}-${workout.date}`;
+      localStorage.setItem(exLogKey, JSON.stringify(newSets));
+      return {
+        ...ex,
+        setsData: newSets
+      };
+    });
     workout.exercises = newExercises;
     localStorage.setItem('workouts', JSON.stringify(workouts));
     renderHistory();
@@ -252,10 +279,9 @@ function editWorkout(id) {
   });
 }
 
-// Render progress stats
 function renderProgressStats() {
   if (!isBrowser || !progressStatsDiv) return;
-  const totalWeight = workouts.reduce((sum, w) => sum + w.exercises.reduce((s, e) => s + (parseInt(e.weight) || 0) * e.sets, 0), 0);
+  const totalWeight = workouts.reduce((sum, w) => sum + w.exercises.reduce((s, e) => s + e.setsData.reduce((t, set) => t + (set.weight || 0), 0), 0), 0);
   const workoutsByType = {};
   workouts.forEach(w => {
     workoutsByType[w.type] = (workoutsByType[w.type] || 0) + 1;
@@ -267,7 +293,6 @@ function renderProgressStats() {
   `;
 }
 
-// Render history
 function renderHistory() {
   if (!isBrowser || !workoutHistory) return;
   workoutHistory.innerHTML = '';
@@ -275,7 +300,7 @@ function renderHistory() {
     const li = document.createElement('li');
     li.innerHTML = `
       ${w.date}: ${w.type.toUpperCase()}<br>
-      ${w.exercises.map(e => `${e.name}: ${e.sets} sets, ${e.reps} reps, ${e.weight} lbs`).join('<br>')}
+      ${w.exercises.map(e => `${e.name}: ${e.setsData.length ? e.setsData.map(s => `${s.weight}x${s.reps}`).join(', ') : 'No data'}`).join('<br>')}
       <span class="edit-btn" data-id="${w.id}">Edit</span>
     `;
     workoutHistory.appendChild(li);
@@ -286,7 +311,6 @@ function renderHistory() {
   });
 }
 
-// Timer functions
 function updateTimerDisplay() {
   if (!isBrowser || !timerDisplay) return;
   const minutes = Math.floor(timerSeconds / 60);
@@ -330,12 +354,9 @@ function resetTimer() {
   pauseTimerBtn.disabled = true;
 }
 
-// Timer events
 if (isBrowser) {
   startTimerBtn?.addEventListener('click', startTimer);
   pauseTimerBtn?.addEventListener('click', pauseTimer);
   resetTimerBtn?.addEventListener('click', resetTimer);
-
-  // Date change
   logDateInput?.addEventListener('change', () => loadWorkout(currentWorkout));
 }
