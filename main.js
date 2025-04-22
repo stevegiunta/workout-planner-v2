@@ -145,13 +145,14 @@ function loadWorkout(type) {
     const inputId = `${type}-${index}`;
     const logKey = `${inputId}-${date}`;
     const savedValue = isBrowser ? JSON.parse(localStorage.getItem(logKey)) || [] : [];
+    // Find the most recent previous workout
     const prevDates = isBrowser ? Object.keys(localStorage)
-      .filter(k => k.startsWith(inputId + '-') && k !== logKey)
-      .sort().reverse() : [];
+      .filter(k => k.startsWith(`${inputId}-`) && k !== logKey)
+      .sort((a, b) => new Date(b.split('-').slice(1).join('-')) - new Date(a.split('-').slice(1).join('-'))) : [];
     const lastLogKey = prevDates[0];
     const lastValue = lastLogKey && isBrowser ? JSON.parse(localStorage.getItem(lastLogKey)) || [] : [];
     const lastDisplay = lastValue.length ? lastValue.map(s => `${s.weight}x${s.reps}`).join(', ') : '—';
-    const maxSets = ex.sets || 3; // Default to 3 sets if not specified
+    const maxSets = ex.sets || 3;
     let setInputs = '';
     for (let i = 0; i < maxSets; i++) {
       const weight = savedValue[i]?.weight || '';
@@ -160,11 +161,11 @@ function loadWorkout(type) {
         <div class="flex space-x-4">
           <div class="flex-1">
             <label for="${inputId}-weight-${i}" class="block text-gray-700">Set ${i + 1} Weight (lbs):</label>
-            <input id="${inputId}-weight-${i}" type="number" value="${weight}" class="w-full p-2 border rounded" min="0" placeholder="e.g. 50" aria-label="Weight for set ${i + 1}" oninput="saveSets('${logKey}', '${inputId}', ${maxSets}); updateLastDisplay('${inputId}', '${lastLogKey}')">
+            <input id="${inputId}-weight-${i}" type="number" value="${weight}" class="w-full p-2 border rounded" min="0" placeholder="e.g. 50" aria-label="Weight for set ${i + 1}" oninput="saveSets('${logKey}', '${inputId}', ${maxSets})">
           </div>
           <div class="flex-1">
             <label for="${inputId}-reps-${i}" class="block text-gray-700">Set ${i + 1} Reps:</label>
-            <input id="${inputId}-reps-${i}" type="number" value="${reps}" class="w-full p-2 border rounded" min="0" placeholder="e.g. 12" aria-label="Reps for set ${i + 1}" oninput="saveSets('${logKey}', '${inputId}', ${maxSets}); updateLastDisplay('${inputId}', '${lastLogKey}')">
+            <input id="${inputId}-reps-${i}" type="number" value="${reps}" class="w-full p-2 border rounded" min="0" placeholder="e.g. 12" aria-label="Reps for set ${i + 1}" oninput="saveSets('${logKey}', '${inputId}', ${maxSets})">
           </div>
         </div>
       `;
@@ -217,13 +218,6 @@ function saveSets(logKey, inputId, maxSets) {
   localStorage.setItem('workouts', JSON.stringify(workouts));
   renderHistory();
   renderProgressStats();
-}
-
-function updateLastDisplay(inputId, lastLogKey) {
-  if (!isBrowser) return;
-  const lastValue = lastLogKey ? JSON.parse(localStorage.getItem(lastLogKey)) || [] : [];
-  const lastDisplay = lastValue.length ? lastValue.map(s => `${s.weight}x${s.reps}`).join(', ') : '—';
-  document.getElementById(`last-${inputId}`).innerText = lastDisplay;
 }
 
 function editWorkout(id) {
